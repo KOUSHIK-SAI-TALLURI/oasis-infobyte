@@ -1,0 +1,84 @@
+import tkinter as tk
+from tkinter import messagebox
+import sqlite3
+from datetime import datetime
+
+# Function to calculate BMI
+def calculate_bmi():
+    try:
+        weight = float(weight_entry.get())
+        height = float(height_entry.get()) / 100  # Convert height to meters
+        bmi = weight / (height ** 2)
+        bmi = round(bmi, 2)
+        bmi_label.config(text=f"BMI: {bmi}")
+        save_data(weight, height, bmi)
+    except ValueError:
+        messagebox.showerror("Error", "Please enter valid weight and height.")
+
+# Function to save data to database
+def save_data(weight, height, bmi):
+    conn = sqlite3.connect('bmi_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS bmi_records
+                 (id INTEGER PRIMARY KEY, weight REAL, height REAL, bmi REAL, date TEXT)''')
+    date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    c.execute("INSERT INTO bmi_records (weight, height, bmi, date) VALUES (?, ?, ?, ?)",
+              (weight, height, bmi, date))
+    conn.commit()
+    conn.close()
+
+# Function to view historical data
+def view_history():
+    conn = sqlite3.connect('bmi_data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM bmi_records ORDER BY date DESC")
+    records = c.fetchall()
+    conn.close()
+    if records:
+        history_text.delete('1.0', tk.END)
+        for record in records:
+            history_text.insert(tk.END, f"Date: {record[4]}, Weight: {record[1]}, Height: {record[2]}, BMI: {record[3]}\n")
+    else:
+        messagebox.showinfo("Information", "No records found.")
+
+# GUI setup
+root = tk.Tk()
+root.title("BMI Calculator")
+
+# Centering the window
+window_width = 400
+window_height = 300
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+x_coordinate = (screen_width / 2) - (window_width / 2)
+y_coordinate = (screen_height / 2) - (window_height / 2)
+root.geometry(f"{window_width}x{window_height}+{int(x_coordinate)}+{int(y_coordinate)}")
+
+# Input fields
+weight_label = tk.Label(root, text="Weight (kg):")
+weight_label.grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
+weight_entry = tk.Entry(root)
+weight_entry.grid(row=0, column=1, padx=10, pady=5)
+
+height_label = tk.Label(root, text="Height (cm):")
+height_label.grid(row=1, column=0, padx=10, pady=5, sticky=tk.W)
+height_entry = tk.Entry(root)
+height_entry.grid(row=1, column=1, padx=10, pady=5)
+
+# Calculate button
+calculate_button = tk.Button(root, text="Calculate BMI", command=calculate_bmi)
+calculate_button.grid(row=2, column=0, columnspan=2, pady=10)
+
+# BMI label
+bmi_label = tk.Label(root, text="")
+bmi_label.grid(row=3, column=0, columnspan=2)
+
+# View history button
+view_history_button = tk.Button(root, text="View History", command=view_history)
+view_history_button.grid(row=4, column=0, columnspan=2, pady=10)
+
+# Historical data text widget
+history_text = tk.Text(root, height=10, width=40)
+history_text.grid(row=5, column=0, columnspan=2, padx=10)
+
+root.mainloop()
