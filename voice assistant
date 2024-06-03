@@ -1,0 +1,100 @@
+import speech_recognition as sr
+import pyttsx3
+import datetime
+import wikipedia
+import smtplib
+import webbrowser
+import os
+import requests
+import json
+
+# Initialize speech recognition
+listener = sr.Recognizer()
+
+# Initialize text to speech engine
+engine = pyttsx3.init()
+
+# Set speech rate
+engine.setProperty('rate', 150)
+
+# Function to speak
+def speak(text):
+    engine.say(text)
+    engine.runAndWait()
+
+# Function to take voice commands
+def take_command():
+    try:
+        with sr.Microphone() as source:
+            print("Listening...")
+            voice = listener.listen(source)
+            command = listener.recognize_google(voice)
+            command = command.lower()
+            if 'hey assistant' in command:
+                command = command.replace('hey assistant', '')
+                print(command)
+    except:
+        pass
+    return command
+
+# Function to send email
+def send_email(receiver, subject, content):
+    # Add your email and password here
+    email = 'your_email@gmail.com'
+    password = 'your_password'
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(email, password)
+    server.sendmail(email, receiver, f"Subject: {subject}\n\n{content}")
+    server.quit()
+
+# Main function to run the assistant
+def run_assistant():
+    command = take_command()
+    if 'time' in command:
+        time = datetime.datetime.now().strftime('%I:%M %p')
+        speak(f"The current time is {time}")
+    elif 'date' in command:
+        date = datetime.datetime.now().strftime('%B %d, %Y')
+        speak(f"Today's date is {date}")
+    elif 'wikipedia' in command:
+        query = command.replace('wikipedia', '')
+        result = wikipedia.summary(query, sentences=2)
+        speak("According to Wikipedia")
+        print(result)
+        speak(result)
+    elif 'send email' in command:
+        try:
+            speak("What should I say?")
+            content = take_command()
+            speak("Who is the receiver?")
+            receiver = input("Receiver's Email: ")
+            send_email(receiver, 'Subject', content)
+            speak("Email has been sent!")
+        except Exception as e:
+            print(e)
+            speak("Sorry, I'm unable to send the email.")
+    elif 'search' in command:
+        speak("What do you want to search for?")
+        search_query = take_command()
+        url = f"https://www.google.com/search?q={search_query}"
+        webbrowser.get().open(url)
+        speak(f"Here are the search results for {search_query}")
+    elif 'weather' in command:
+        # Add your API key and city name here
+        api_key = 'your_api_key'
+        city = 'your_city'
+        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric"
+        response = requests.get(url)
+        data = response.json()
+        temperature = data['main']['temp']
+        description = data['weather'][0]['description']
+        speak(f"The temperature in {city} is {temperature}°C with {description}")
+    else:
+        speak("Sorry, I didn't get that. Can you please repeat?")
+
+# Main function call
+if _name_ == "_main_":
+    speak("Hey Assistant here, how can I assist you?")
+    while True:
+        run_assistant()
